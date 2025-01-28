@@ -570,9 +570,7 @@ where
 		let actual = match Self::mutate_account_handling_dust(who, |account| {
 			let actual = cmp::min(account.reserved, value);
 			account.reserved -= actual;
-			// defensive only: this can never fail since total issuance which is at least
-			// free+reserved fits into the same data type.
-			account.free = account.free.defensive_saturating_add(actual);
+			account.free = account.free.checked_add(actual).ok_or(ArithmeticError::Overflow)?;
 			actual
 		}) {
 			Ok(x) => x,
@@ -674,8 +672,7 @@ where
 		Reserves::<T, I>::try_mutate(who, |reserves| -> DispatchResult {
 			match reserves.binary_search_by_key(id, |data| data.id) {
 				Ok(index) => {
-					// this add can't overflow but just to be defensive.
-					reserves[index].amount = reserves[index].amount.defensive_saturating_add(value);
+					reserves[index].amount = reserves[index].amount.checked_add(value).ok_or(ArithmeticError::Overflow)?;
 				},
 				Err(index) => {
 					reserves
@@ -708,8 +705,7 @@ where
 
 						let remain = <Self as ReservableCurrency<_>>::unreserve(who, to_change);
 
-						// remain should always be zero but just to be defensive here.
-						let actual = to_change.defensive_saturating_sub(remain);
+						let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 
 						// `actual <= to_change` and `to_change <= amount`; qed;
 						reserves[index].amount -= actual;
@@ -755,8 +751,7 @@ where
 					let (imb, remain) =
 						<Self as ReservableCurrency<_>>::slash_reserved(who, to_change);
 
-					// remain should always be zero but just to be defensive here.
-					let actual = to_change.defensive_saturating_sub(remain);
+					let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 
 					// `actual <= to_change` and `to_change <= amount`; qed;
 					reserves[index].amount -= actual;
@@ -814,13 +809,10 @@ where
 												status,
 											)?;
 
-										// remain should always be zero but just to be defensive
-										// here.
-										let actual = to_change.defensive_saturating_sub(remain);
+										let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 
-										// this add can't overflow but just to be defensive.
 										reserves[index].amount =
-											reserves[index].amount.defensive_saturating_add(actual);
+											reserves[index].amount.checked_add(actual).ok_or(ArithmeticError::Overflow)?;
 
 										Ok(actual)
 									},
@@ -833,9 +825,7 @@ where
 												status,
 											)?;
 
-										// remain should always be zero but just to be defensive
-										// here
-										let actual = to_change.defensive_saturating_sub(remain);
+										let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 
 										reserves
 											.try_insert(
@@ -858,7 +848,7 @@ where
 						)?;
 
 						// remain should always be zero but just to be defensive here
-						to_change.defensive_saturating_sub(remain)
+						to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 					};
 
 					// `actual <= to_change` and `to_change <= amount`; qed;
