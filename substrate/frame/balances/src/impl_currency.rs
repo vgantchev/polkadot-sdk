@@ -709,7 +709,6 @@ where
 
 						// remain should always be zero but just to be defensive here.
 						let actual = to_change.defensive_saturating_sub(remain);
-						let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 
 						// `actual <= to_change` and `to_change <= amount`; qed;
 						reserves[index].amount -= actual;
@@ -833,7 +832,9 @@ where
 												status,
 											)?;
 
-										let actual = to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
+										// remain should always be zero but just to be defensive
+										// here
+										let actual = to_change.defensive_saturating_sub(remain);
 
 										reserves
 											.try_insert(
@@ -855,7 +856,8 @@ where
 							status,
 						)?;
 
-						to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
+						// remain should always be zero but just to be defensive here
+						to_change.defensive_saturating_sub(remain)
 					};
 
 					// `actual <= to_change` and `to_change <= amount`; qed;
