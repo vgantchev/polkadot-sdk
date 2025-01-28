@@ -847,7 +847,6 @@ where
 							status,
 						)?;
 
-						// remain should always be zero but just to be defensive here
 						to_change.checked_sub(remain).ok_or(ArithmeticError::Underflow)?;
 					};
 
